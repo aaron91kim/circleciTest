@@ -1,0 +1,68 @@
+version: 2.1
+
+orbs:
+  unity: game-ci/unity@1.7.0
+jobs:
+  unity-build:
+    executor:
+      name: 'unity/windows-2019'
+      size: 'medium'
+      editor_version: $UNITY_VERSION
+      target_platform: 'windows-il2cpp'
+    steps:
+      - unity/prepare-env:
+          unity-license-var-name: UNITY_ENCODED_LICENSE
+          unity-username-var-name: UNITY_USERNAME
+          unity-password-var-name: UNITY_PASSWORD
+      - unity/build:
+          step-name: 'Build StandaloneWindows64 il2cpp'
+          build-target: StandaloneWindows64
+          compress: true
+          build-method: 'XGolf.Build.XGolfBuild.BuildGame'
+          build-name: 'XGolf'
+  unity-test:
+    executor:
+      name: 'unity/windows-2019'
+      size: 'medium'
+      editor_version: $UNITY_VERSION
+      target_platform: 'windows-il2cpp'
+    steps:
+      - checkout
+      - unity/prepare-env:
+          unity-license-var-name: UNITY_ENCODED_LICENSE
+          unity-username-var-name: UNITY_USERNAME
+          unity-password-var-name: UNITY_PASSWORD
+      - unity/test:
+          step-name: 'Check if the tests run and results are uploaded'
+          test-platform: 'editmode'
+
+workflows:
+  build-and-test:
+    jobs:
+      - unity-test:
+          name: 'unity-test'
+          context: 
+            - unity
+      - unity-build:
+          requires:
+            - unity-test
+          context: 
+            - unity
+            - simulator-stage
+          filters:
+            branches:
+              only:
+                - dev
+                - circle-ci
+      - unity-build:
+          requires:
+            - unity-test
+          context: 
+            - unity
+            - simulator-prod
+          filters:
+            branches:
+              only:
+                - master
+          
+        
