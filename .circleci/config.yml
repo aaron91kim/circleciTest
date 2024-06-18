@@ -7,7 +7,7 @@ jobs:
     executor:
       name: 'unity/windows-2019'
       size: 'medium'
-      editor_version: $UNITY_VERSION
+      editor_version: "${UNITY_VERSION}"
       target_platform: 'windows-il2cpp'
     steps:
       - checkout
@@ -25,7 +25,7 @@ jobs:
     executor:
       name: 'unity/windows-2019'
       size: 'medium'
-      editor_version: $UNITY_VERSION
+      editor_version: "${UNITY_VERSION}"
       target_platform: 'windows-il2cpp'
     steps:
       - checkout
