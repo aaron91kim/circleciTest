@@ -10,6 +10,7 @@ jobs:
       editor_version: $UNITY_VERSION
       target_platform: 'windows-il2cpp'
     steps:
+      - checkout
       - unity/prepare-env:
           unity-license-var-name: UNITY_ENCODED_LICENSE
           unity-username-var-name: UNITY_USERNAME
@@ -63,6 +64,6 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - main
           
         

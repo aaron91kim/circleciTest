@@ -9,15 +9,6 @@ namespace XGolf.Build
 {
     public class XGolfBuild
     {
-
-        private static readonly string[] EXECS_WITH_DLL_DEPENDENCIES = new string[] {
-            "MakeKeyLock.exe",
-            "METester_XGC_N.exe",
-            "SetKeyLock.EXE",
-            "XGCTester_N.exe",
-            "XVisionXExe.exe",
-        };
-
         private static readonly string[] SCENES = new string[] {
             "Assets/Scenes/XGolfStart.unity",
             "Assets/Scenes/LightReviser.unity",
@@ -43,7 +34,7 @@ namespace XGolf.Build
             // Players.
             Build(buildPath);
         }
-        
+
         public static void BuildGame()
         {
             WriteEnvFile();
