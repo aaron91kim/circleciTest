@@ -45,10 +45,6 @@ namespace XGolf.Build
             {
                 Directory.CreateDirectory(buildPath);
             }
-            else
-            {
-                Directory.Delete(buildPath, true);
-            }
 
             Build(buildPath);
         }
