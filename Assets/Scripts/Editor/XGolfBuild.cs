@@ -10,8 +10,7 @@ namespace XGolf.Build
     public class XGolfBuild
     {
         private static readonly string[] SCENES = new string[] {
-            "Assets/Scenes/XGolfStart.unity",
-            "Assets/Scenes/LightReviser.unity",
+            "Assets/Scenes/SampleScene.unity",
         };
         private static readonly string UTIL_PATH = "Utilities/";
         private static readonly string BUILT_PLUGIN_PATH = "XGolf_Data/Plugins/x86_64/";
