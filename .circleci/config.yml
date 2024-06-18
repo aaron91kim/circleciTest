@@ -7,7 +7,7 @@ jobs:
     executor:
       name: 'unity/windows-2019'
       size: 'medium'
-      editor_version: "2019.4.35f1"
+      editor_version: '2019.4.35f1'
       target_platform: 'windows-il2cpp'
     steps:
       - checkout
@@ -15,7 +15,7 @@ jobs:
           unity-license-var-name: UNITY_ENCODED_LICENSE
           unity-username-var-name: UNITY_USERNAME
           unity-password-var-name: UNITY_PASSWORD
-          no_output_timeout: 30m
+          no_output_timeout: '30m'
       - unity/build:
           step-name: 'Build StandaloneWindows64 il2cpp'
           build-target: StandaloneWindows64
@@ -26,7 +26,7 @@ jobs:
     executor:
       name: 'unity/windows-2019'
       size: 'medium'
-      editor_version: "2019.4.35f1"
+      editor_version: '2019.4.35f1'
       target_platform: 'windows-il2cpp'
     steps:
       - checkout
@@ -34,7 +34,7 @@ jobs:
           unity-license-var-name: UNITY_ENCODED_LICENSE
           unity-username-var-name: UNITY_USERNAME
           unity-password-var-name: UNITY_PASSWORD
-          no_output_timeout: 30m
+          no_output_timeout: '30m'
       - unity/test:
           step-name: 'Check if the tests run and results are uploaded'
           test-platform: 'editmode'
