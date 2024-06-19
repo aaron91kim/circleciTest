@@ -49,6 +49,7 @@ namespace XGolf.Build
         }
         private static void SetbundleVersion()
         {
+            Debug.Log($"Setting up the app bundle version");
             string version = System.Environment.GetEnvironmentVariable("VERSION");
             if (!string.IsNullOrEmpty(version))
             {
@@ -58,13 +59,14 @@ namespace XGolf.Build
         
         private static void WriteEnvFile()
         {
+            Debug.Log($"Writing Env file");
             // TODO: move this process out of this. Luancher should be responsible for it.(store json data in unity dataPath)
             EnvConfig config = ScriptableObject.CreateInstance<EnvConfig>();
             config.ENV = System.Environment.GetEnvironmentVariable("ENV");
             config.API_URL = System.Environment.GetEnvironmentVariable("API_URL");
             config.SIMULATOR_EMAIL = System.Environment.GetEnvironmentVariable("SIMULATOR_EMAIL");
             config.SIMULATOR_PASSWORD = System.Environment.GetEnvironmentVariable("SIMULATOR_PASSWORD");
-            Debug.Log($"{config.API_URL} {config.SIMULATOR_EMAIL} {config.SIMULATOR_PASSWORD}");
+            Debug.Log($"ENV: {config.ENV}, API_URL:{config.API_URL} ");
             AssetDatabase.CreateAsset(config, "Assets/Resources/ENV.asset");
             AssetDatabase.SaveAssets();
         }

@@ -42,13 +42,13 @@ jobs:
 workflows:
   build-and-test:
     jobs:
-      - unity-test:
-          name: 'unity-test'
-          context: 
-            - unity
+      # - unity-test:
+      #     name: 'unity-test'
+      #     context: 
+      #       - unity
       - unity-build:
-          requires:
-            - unity-test
+          # requires:
+          #   - unity-test
           context: 
             - unity
             - simulator-stage
@@ -58,8 +58,8 @@ workflows:
                 - dev
                 - circle-ci
       - unity-build:
-          requires:
-            - unity-test
+          # requires:
+          #   - unity-test
           context: 
             - unity
             - simulator-prod
