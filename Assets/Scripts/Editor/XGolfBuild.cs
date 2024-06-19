@@ -37,7 +37,6 @@ namespace XGolf.Build
         public static void BuildGame()
         {
             WriteEnvFile();
-            SetbundleVersion();
             string buildPath = Path.GetDirectoryName(Application.dataPath) + "/build";
 
             if (!Directory.Exists(buildPath))
@@ -47,31 +46,37 @@ namespace XGolf.Build
 
             Build(buildPath);
         }
-        private static void SetbundleVersion()
+
+        private static Dictionary<string, string> GetEnvVariableFromCommandLine()
         {
-            Debug.Log($"Setting up the app bundle version");
-            string version = System.Environment.GetEnvironmentVariable("VERSION");
-            if (!string.IsNullOrEmpty(version))
+            var args = System.Environment.GetCommandLineArgs().Where((arg) => arg.Contains("="));
+            var envVariables = new Dictionary<string, string>();
+            foreach (var arg in args)
             {
-                PlayerSettings.bundleVersion = version;
+                var keyIndex = arg.IndexOf('=');
+                string key = arg.Substring(1, keyIndex - 1);
+                string value = arg.Substring(keyIndex + 1);
+                Debug.Log($"key: {key} value: {value}");
+                envVariables.Add(key, value);
             }
+            return envVariables;
         }
-        
+
         private static void WriteEnvFile()
         {
             Debug.Log($"Writing Env file");
-            foreach (System.Collections.DictionaryEntry de in System.Environment.GetEnvironmentVariables()){
-                Debug.Log($"{de.Key} = {de.Value}");
-            }
+            Dictionary<string, string> env = GetEnvVariableFromCommandLine();
             // TODO: move this process out of this. Luancher should be responsible for it.(store json data in unity dataPath)
             EnvConfig config = ScriptableObject.CreateInstance<EnvConfig>();
-            config.ENV = System.Environment.GetEnvironmentVariable("ENV");
-            config.API_URL = System.Environment.GetEnvironmentVariable("API_URL");
-            config.SIMULATOR_EMAIL = System.Environment.GetEnvironmentVariable("SIMULATOR_EMAIL");
-            config.SIMULATOR_PASSWORD = System.Environment.GetEnvironmentVariable("SIMULATOR_PASSWORD");
+            config.ENV = env["ENV"];
+            config.API_URL = env["API_URL"];
+            config.SIMULATOR_EMAIL = env["SIMULATOR_EMAIL"];
+            config.SIMULATOR_PASSWORD = env["SIMULATOR_PASSWORD"];
             Debug.Log($"ENV: {config.ENV}, API_URL:{config.API_URL} ");
             AssetDatabase.CreateAsset(config, "Assets/Resources/ENV.asset");
             AssetDatabase.SaveAssets();
+
+            PlayerSettings.bundleVersion = env["VERSION"];
         }
 
         private static void Build(string buildPath)
