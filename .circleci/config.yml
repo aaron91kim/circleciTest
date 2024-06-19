@@ -22,6 +22,8 @@ jobs:
           compress: true
           build-method: 'XGolf.Build.XGolfBuild.BuildGame'
           build-name: 'XGolf'
+          custom-parameters:
+            '-VERSION $VERSION -ENV $ENV -API_URL $API_URL -SIMULATOR_EMAIL $SIMULATOR_EMAIL -SIMULATOR_PASSWORD $SIMULATOR_PASSWORD'
   unity-test:
     executor:
       name: 'unity/windows-2019'
