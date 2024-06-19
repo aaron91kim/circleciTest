@@ -60,6 +60,9 @@ namespace XGolf.Build
         private static void WriteEnvFile()
         {
             Debug.Log($"Writing Env file");
+            foreach (System.Collections.DictionaryEntry de in System.Environment.GetEnvironmentVariables()){
+                Debug.Log($"{de.Key} = {de.Value}");
+            }
             // TODO: move this process out of this. Luancher should be responsible for it.(store json data in unity dataPath)
             EnvConfig config = ScriptableObject.CreateInstance<EnvConfig>();
             config.ENV = System.Environment.GetEnvironmentVariable("ENV");
