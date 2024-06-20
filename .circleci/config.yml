@@ -2,7 +2,20 @@ version: 2.1
 
 orbs:
   unity: game-ci/unity@1.7.0
+  win: circleci/windows@2.4.1
 jobs:
+  inno-setup:
+    executor:
+      name: win/default
+    steps:
+      - attach_workspace:
+        at: '.'
+      - run: choco install innosetup
+      - run: ls 
+      - run: ls /
+      - run: iscc.exe build/installer.iss
+      - store_artifacts:
+          path: build/xgolf_setup.exe
   unity-build:
     executor:
       name: 'unity/windows-2019'
@@ -19,9 +32,11 @@ jobs:
       - unity/build:
           step-name: 'Build StandaloneWindows64 il2cpp'
           build-target: StandaloneWindows64
-          compress: true
           build-method: 'XGolf.Build.XGolfBuild.BuildGame'
           build-name: 'XGolf'
+          store-artifacts: false
+          compress: false
+          persist-to-workspace: true
           custom-parameters:
             '-VERSION=$VERSION -ENV=$ENV -API_URL=$API_URL -SIMULATOR_EMAIL=$SIMULATOR_EMAIL -SIMULATOR_PASSWORD=$SIMULATOR_PASSWORD'
   unity-test:
@@ -42,23 +57,24 @@ jobs:
           test-platform: 'editmode'
 
 workflows:
+  
   build-and-test:
     jobs:
       # - unity-test:
       #     name: 'unity-test'
       #     context: 
       #       - unity
-      - unity-build:
-          # requires:
-          #   - unity-test
-          context: 
-            - unity
-            - simulator-stage
-          filters:
-            branches:
-              only:
-                - dev
-                - circle-ci
+      # - unity-build:
+      #     requires:
+      #       - unity-test
+      #     context: 
+      #       - unity
+      #       - simulator-stage
+      #     filters:
+      #       branches:
+      #         only:
+      #           - dev
+      #           - circle-ci
       - unity-build:
           # requires:
           #   - unity-test
@@ -69,5 +85,8 @@ workflows:
             branches:
               only:
                 - main
+      - inno-setup:
+          context:
+            - simulator-prod
           
         
