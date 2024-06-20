@@ -86,6 +86,8 @@ workflows:
               only:
                 - main
       - inno-setup:
+          requires:
+            - unity-build
           context:
             - simulator-prod
           
