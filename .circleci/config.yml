@@ -35,7 +35,7 @@ jobs:
           build-method: 'XGolf.Build.XGolfBuild.BuildGame'
           build-name: 'XGolf'
           store-artifacts: false
-          compress: false
+          compress: true
           persist-to-workspace: true
           custom-parameters:
             '-VERSION=$VERSION -ENV=$ENV -API_URL=$API_URL -SIMULATOR_EMAIL=$SIMULATOR_EMAIL -SIMULATOR_PASSWORD=$SIMULATOR_PASSWORD'
