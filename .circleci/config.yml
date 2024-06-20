@@ -9,7 +9,7 @@ jobs:
       name: win/default
     steps:
       - attach_workspace:
-        at: '.'
+          at: '.'
       - run: choco install innosetup
       - run: ls 
       - run: ls /
