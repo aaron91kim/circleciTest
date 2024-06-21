@@ -11,8 +11,8 @@ jobs:
       - attach_workspace:
           at: '.'
       - run: choco install innosetup
-      - run: ls 
-      - run: ls /
+      - run: mkdir -p ./build
+      - run: tar xf "./StandaloneWindows64.tar.gz" -C ./build
       - run: iscc.exe build/installer.iss
       - store_artifacts:
           path: build/xgolf_setup.exe
