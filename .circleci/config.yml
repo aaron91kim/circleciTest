@@ -14,7 +14,7 @@ jobs:
       - run: mkdir -p /unity_project/build/
       - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
       - run: ls /unity_project/build/
-      - run: iscc.exe "c:\unity_project\build\installer.iss"
+      - run: iscc "c:\unity_project\build\installer.iss"
       - store_artifacts:
           path: /unity_project/build/xgolf_setup.exe
   unity-build:
