@@ -13,7 +13,8 @@ jobs:
       - run: choco install innosetup
       - run: mkdir -p /unity_project/build/
       - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
-      - run: iscc.exe /unity_project/build/installer.iss
+      - run: ls /unity_project/build/
+      - run: iscc.exe "/unity_project/build/installer.iss"
       - store_artifacts:
           path: /unity_project/build/xgolf_setup.exe
   unity-build:
