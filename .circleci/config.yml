@@ -9,12 +9,16 @@ jobs:
     steps:
       - run: pwd
       - run: ls
-      - run: mkdir -p tmp
-      - run: echo "Hello World" > tmp/helloworld.txt
+      - run: mkdir -p tmp1
+      - run: chmod 777 tmp1
+      - run: echo "Hello World" > tmp1/helloworld.txt
+      - run: ls
+      - run: ls tmp1
+      - run: cat tmp1/helloworld.txt
       - persist_to_workspace:
           # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
           # environment which is taken to be the root directory of the workspace.
-          root: "tmp"
+          root: tmp1
           # Must be relative path from root
           paths:
             - helloworld.txt
@@ -45,14 +49,17 @@ jobs:
     # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
     docker:
       - image: cimg/openjdk:17.0.3
-    working_directory: ${WORKING_DIRECTORY}
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
       - run: echo ${WORKING_DIRECTORY}
+      - run: ls
+      - run: pwd
+      - run: ls /
       # 2) Attach to Workspace in order to access the artifact file
       - attach_workspace:
-          at: /unity_project/build
+          at: /unity_project/build/tmp1
+      - run: pwd
       - run: ls
       - run: ls /unity_project/build
       # 1) Create Artifact Directory to store signed and unsigned artifact files
