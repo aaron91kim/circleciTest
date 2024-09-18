@@ -1,95 +1,95 @@
 version: 2.1
 
 orbs:
-  unity: game-ci/unity@1.7.0
   win: circleci/windows@2.4.1
 jobs:
-  inno-setup:
-    executor:
-      name: win/default
+  create-file:
+    executor: win/default
     steps:
-      - attach_workspace:
-          at: '.'
-      - run: choco install innosetup
       - run: mkdir -p /unity_project/build/
-      - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
-      - run: ls /unity_project/build/
-      - run: iscc "c:\unity_project\build\installer.iss"
-      - store_artifacts:
-          path: /unity_project/build/xgolf_setup.exe
-  unity-build:
-    executor:
-      name: 'unity/windows-2019'
-      size: 'medium'
-      editor_version: '2019.4.35f1'
-      target_platform: 'windows-il2cpp'
+      - run: echo "Hello World" > /unity_project/build/helloworld.txt
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
+          # environment which is taken to be the root directory of the workspace.
+          root: "."
+          # Must be relative path from root
+          paths:
+            - unity_project
+  sign:
+    # Create an environment variable
+    environment:
+      ENVIRONMENT_NAME: TEST #PROD
+      COMMAND: sign
+      WORKSPACE: "."
+      FILE_PATH: << parameters.file-path >>
+      FILE_NAME: << parameters.file-name >>
+
+    # Artifact name for signing
+    parameters:
+      workspace:
+        type: string
+        default: "."
+      file-path:
+        type: string
+        default: ""
+      file-name:
+        type: string
+        default: ""
+
+    # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
+    # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
+    # Be sure to update the Docker image tag below to openjdk version of your application.
+    # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
+    docker:
+      - image: cimg/openjdk:17.0.3
+
+    # Add steps to the job
+    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
-      - checkout
-      - unity/prepare-env:
-          unity-license-var-name: UNITY_ENCODED_LICENSE
-          unity-username-var-name: UNITY_USERNAME
-          unity-password-var-name: UNITY_PASSWORD
-          no_output_timeout: '30m'
-      - unity/build:
-          step-name: 'Build StandaloneWindows64 il2cpp'
-          build-target: StandaloneWindows64
-          build-method: 'XGolf.Build.XGolfBuild.BuildGame'
-          build-name: 'XGolf'
-          store-artifacts: false
-          compress: true
-          persist-to-workspace: true
-          custom-parameters:
-            '-VERSION=$VERSION -ENV=$ENV -API_URL=$API_URL -SIMULATOR_EMAIL=$SIMULATOR_EMAIL -SIMULATOR_PASSWORD=$SIMULATOR_PASSWORD'
-  unity-test:
-    executor:
-      name: 'unity/windows-2019'
-      size: 'medium'
-      editor_version: '2019.4.35f1'
-      target_platform: 'windows-il2cpp'
-    steps:
-      - checkout
-      - unity/prepare-env:
-          unity-license-var-name: UNITY_ENCODED_LICENSE
-          unity-username-var-name: UNITY_USERNAME
-          unity-password-var-name: UNITY_PASSWORD
-          no_output_timeout: '30m'
-      - unity/test:
-          step-name: 'Check if the tests run and results are uploaded'
-          test-platform: 'editmode'
+      # 1) Create Artifact Directory to store signed and unsigned artifact files
+      - run:
+          name: Create Artifacts Directory
+          command: |
+            mkdir -p ${WORKSPACE}/artifacts
+            mkdir -p ${WORKSPACE}/packages
+      # 2) Attach to Workspace in order to access the artifact file
+      - attach_workspace:
+          at: "."
+
+      # 3) Enable Docker for CodeSigner on Circle-CI
+      - setup_remote_docker:
+          name: Setup Remote Docker
+          version: 19.03.13
+          docker_layer_caching: true
+
+      # 4) Pull Codesigner Docker Image From Github Registry
+      - run:
+          name: Docker Pull Image
+          command: |
+            docker pull ghcr.io/sslcom/codesigner:latest
+            docker pull alpine:3.4
+
+      # 5) This is the step where the created DLL, JAR, EXE, MSI, PS1 (artifact) files will be signed with CodeSignTool.
+      - run:
+          name: Sign Artifact File
+          command: |
+            docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
+            docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
+            docker cp ${WORKSPACE}/${FILE_PATH}/${FILE_NAME} codesign-in:/codesign/packages
+            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out 
+              -e USERNAME=${USERNAME} -e PASSWORD=${PASSWORD} -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} 
+              ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=${FILE_PATH} -output_dir_path=/codesign/artifacts
+            docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKSPACE}/artifacts/${FILE_NAME}
 
 workflows:
-  
   build-and-test:
     jobs:
-      # - unity-test:
-      #     name: 'unity-test'
-      #     context: 
-      #       - unity
-      # - unity-build:
-      #     requires:
-      #       - unity-test
-      #     context: 
-      #       - unity
-      #       - simulator-stage
-      #     filters:
-      #       branches:
-      #         only:
-      #           - dev
-      #           - circle-ci
-      - unity-build:
-          # requires:
-          #   - unity-test
-          context: 
-            - unity
-            - simulator-prod
-          filters:
-            branches:
-              only:
-                - main
-      - inno-setup:
+      - create-file:
+          name: "create-file"
+      - sign:
+          name: "sign"
           requires:
-            - unity-build
-          context:
-            - simulator-prod
-          
-        
+            - create-file
+          parameters:
+            file-path: "/unity_project/build"
+            file-name: "helloworld.txt"
