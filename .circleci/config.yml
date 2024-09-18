@@ -80,6 +80,8 @@ jobs:
               -e USERNAME=${USERNAME} -e PASSWORD=${PASSWORD} -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} 
               ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=${FILE_PATH} -output_dir_path=/codesign/artifacts
             docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKSPACE}/artifacts/${FILE_NAME}
+      - store_artifacts:
+          path: ${WORKSPACE}/artifacts/${FILE_NAME}
 
 workflows:
   build-and-test:
