@@ -37,7 +37,7 @@ jobs:
       - run: ls /
       - run: ls /tmp
       - run: ls /tmp/workspace
-      - run: cat workspace/echo-output
+      - run: cat /tmp/workspace/echo-output
 
 workflows:
   btd:
