@@ -5,28 +5,31 @@ orbs:
 jobs:
   create-file:
     executor: win/default
+    working_directory: /unity_project/build
     steps:
-      - run: mkdir -p /unity_project/build/
-      - run: echo "Hello World" > /unity_project/build/helloworld.txt
+      - run: pwd
+      - run: ls
+      - run: mkdir -p tmp
+      - run: echo "Hello World" > tmp/helloworld.txt
       - persist_to_workspace:
           # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
           # environment which is taken to be the root directory of the workspace.
-          root: "."
+          root: "tmp"
           # Must be relative path from root
           paths:
-            - unity_project
+            - helloworld.txt
   sign:
     # Create an environment variable
     environment:
       ENVIRONMENT_NAME: TEST #PROD
       COMMAND: sign
-      WORKSPACE: "."
+      WORKING_DIRECTORY: << parameters.working-directory >>
       FILE_PATH: << parameters.file-path >>
       FILE_NAME: << parameters.file-name >>
 
     # Artifact name for signing
     parameters:
-      workspace:
+      working-directory:
         type: string
         default: "."
       file-path:
@@ -42,20 +45,22 @@ jobs:
     # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
     docker:
       - image: cimg/openjdk:17.0.3
-
+    working_directory: ${WORKING_DIRECTORY}
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
+      - run: echo ${WORKING_DIRECTORY}
+      # 2) Attach to Workspace in order to access the artifact file
+      - attach_workspace:
+          at: /unity_project/build
+      - run: ls
+      - run: ls /unity_project/build
       # 1) Create Artifact Directory to store signed and unsigned artifact files
       - run:
           name: Create Artifacts Directory
           command: |
-            mkdir -p ${WORKSPACE}/artifacts
-            mkdir -p ${WORKSPACE}/packages
-      # 2) Attach to Workspace in order to access the artifact file
-      - attach_workspace:
-          at: "."
-
+            mkdir -p ${WORKING_DIRECTORY}/artifacts
+            mkdir -p ${WORKING_DIRECTORY}/packages
       # 3) Enable Docker for CodeSigner on Circle-CI
       - setup_remote_docker:
           name: Setup Remote Docker
@@ -75,13 +80,13 @@ jobs:
           command: |
             docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
             docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
-            docker cp ${WORKSPACE}/${FILE_PATH}/${FILE_NAME} codesign-in:/codesign/packages
+            docker cp ${WORKING_DIRECTORY}/${FILE_PATH}/${FILE_NAME} codesign-in:/codesign/packages
             docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out 
               -e USERNAME=${USERNAME} -e PASSWORD=${PASSWORD} -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} 
               ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=${FILE_PATH} -output_dir_path=/codesign/artifacts
-            docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKSPACE}/artifacts/${FILE_NAME}
+            docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKING_DIRECTORY}/artifacts/${FILE_NAME}
       - store_artifacts:
-          path: ${WORKSPACE}/artifacts/${FILE_NAME}
+          path: ${WORKING_DIRECTORY}/artifacts/${FILE_NAME}
 
 workflows:
   build-and-test:
@@ -92,6 +97,6 @@ workflows:
           name: "sign"
           requires:
             - create-file
-          parameters:
-            file-path: "/unity_project/build"
-            file-name: "helloworld.txt"
+          file-path: ""
+          file-name: "helloworld.txt"
+          working-directory: "/signing"
