@@ -128,7 +128,7 @@ jobs:
             docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
             docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
             docker cp ${WORKSPACE}/workspace/echo-output.ps1 codesign-in:/codesign/packages
-            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=xgolfamerica -e PASSWORD="GoldenTee4LifeMan!" -e TOTP_SECRET=B0c39wZIbBvMJERak8IBpr0aBopu4wWtQ+QEAqogpds= -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/echo-output.ps1 -output_dir_path=/codesign/artifacts
+            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD="${PASSWORD}" -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/echo-output.ps1 -output_dir_path=/codesign/artifacts
             docker cp codesign-out:/codesign/artifacts/echo-output.ps1 ${WORKSPACE}/artifacts/echo-output.ps1
       - store_artifacts:
           path: ${WORKSPACE}/artifacts/echo-output.ps1
