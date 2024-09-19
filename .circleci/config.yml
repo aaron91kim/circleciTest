@@ -130,8 +130,9 @@ jobs:
             docker cp ${WORKSPACE}/workspace/echo-output.ps1 codesign-in:/codesign/packages
             docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD="${PASSWORD}" -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/echo-output.ps1 -output_dir_path=/codesign/artifacts
             docker cp codesign-out:/codesign/artifacts/echo-output.ps1 ${WORKSPACE}/artifacts/echo-output.ps1
+      - run: zip -r ${WORKSPACE}/artifacts.zip ${WORKSPACE}/artifacts
       - store_artifacts:
-          path: artifacts/echo-output.ps1
+          path: artifacts.zip
 
 workflows:
   build-and-test:
