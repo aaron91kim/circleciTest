@@ -1,15 +1,80 @@
+# version: 2.1
+# orbs:
+#   win: circleci/windows@2.4.1
+
+# executors:
+#   my-executor:
+#     docker:
+#       - image: buildpack-deps:jessie
+#     working_directory: /tmp1
+
+# jobs:
+#   flow:
+#     executor: win/default
+#     working_directory: /tmp
+#     steps:
+#       - run: mkdir -p workspace
+#       - run: echo "Hello, world!" > workspace/echo-output.ps1
+
+#       # Persist the specified paths (workspace/echo-output.ps1) into the workspace for use in downstream job.
+#       - persist_to_workspace:
+#           # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
+#           # environment which is taken to be the root directory of the workspace.
+#           root: workspace
+#           # Must be relative path from root
+#           paths:
+#             - echo-output.ps1
+
+#   downstream:
+#     executor: my-executor
+#     steps:
+#       - run: pwd
+#       - attach_workspace:
+#           # Must be absolute path or relative path from working_directory
+#           at: /tmp/workspace
+#       - run: pwd
+#       - run: ls
+#       - run: ls /
+#       - run: ls /tmp
+#       - run: ls /tmp/workspace
+#       - run: cat /tmp/workspace/echo-output.ps1
+
+# workflows:
+#   btd:
+#     jobs:
+#       - flow
+#       - downstream:
+#           requires:
+#             - flow
 version: 2.1
+executors:
+  my-executor:
+    docker:
+      - image: cimg/openjdk:17.0.3
 orbs:
-  unity: game-ci/unity@1.7.0
   win: circleci/windows@2.4.1
 jobs:
-  sign:
+  create-file:
+    executor: win/default
     working_directory: /circleci/project
+    steps:
+      - run: echo "Hello, world!" > echo-output.ps1
+
+      # Persist the specified paths (workspace/echo-output.ps1) into the workspace for use in downstream job.
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
+          # environment which is taken to be the root directory of the workspace.
+          root: "."
+          # Must be relative path from root
+          paths:
+            - echo-output.ps1
+  sign:
+    working_directory: /home/circleci/project
     # Create an environment variable
     environment:
       ENVIRONMENT_NAME: PROD #PROD
       COMMAND: sign
-      WORKSPACE: /circleci/project
+      WORKSPACE: /home/circleci/project
       FILE_PATH: << parameters.file-path >>
       FILE_NAME: << parameters.file-name >>
 
@@ -21,15 +86,17 @@ jobs:
       file-name:
         type: string
         default: ""
+
     # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
     # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # Be sure to update the Docker image tag below to openjdk version of your application.
     # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
-    docker:
-      - image: cimg/openjdk:17.0.3
+    executor: my-executor
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
+      - checkout
+
       # 1) Create Artifact Directory to store signed and unsigned artifact files
       - run:
           name: Create Artifacts Directory
@@ -38,8 +105,8 @@ jobs:
             mkdir -p ${WORKSPACE}/packages
       # 2) Attach to Workspace in order to access the artifact file
       - attach_workspace:
-          at: "."
-      - run: cat /circleci/project/${FILE_NAME}
+          at: /circleci/project
+      - run: cat /circleci/project/echo-output.ps1
       # 3) Enable Docker for CodeSigner on Circle-CI
       - setup_remote_docker:
           name: Setup Remote Docker
@@ -59,80 +126,21 @@ jobs:
           command: |
             docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
             docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
-            docker cp ${WORKSPACE}/${FILE_NAME} codesign-in:/codesign/packages
-            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD="${PASSWORD}" -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/${FILE_NAME} -output_dir_path=/codesign/artifacts
-            docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKSPACE}/artifacts/${FILE_NAME}
+            docker cp /circleci/project/echo-output.ps1 codesign-in:/codesign/packages
+            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD="${PASSWORD}" -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/echo-output.ps1 -output_dir_path=/codesign/artifacts
+            docker cp codesign-out:/codesign/artifacts/echo-output.ps1 ${WORKSPACE}/artifacts/echo-output.ps1
+      - run: zip -r ${WORKSPACE}/artifacts.zip ${WORKSPACE}/artifacts
       - store_artifacts:
-          path: artifacts/${FILE_NAME}
-  inno-setup:
-    executor:
-      name: win/default
-    steps:
-      - attach_workspace:
-          at: "."
-      - run: choco install innosetup
-      - run: mkdir -p /unity_project/build/
-      - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
-      - run: iscc "c:\unity_project\build\installer.iss"
-      - store_artifacts:
-          path: xgolf_setup.exe
-  unity-build:
-    executor:
-      name: "unity/windows-2019"
-      size: "large"
-      editor_version: "2019.4.35f1"
-      target_platform: "windows-il2cpp"
-    steps:
-      - run: git config --system core.longpaths true
-      - checkout
-      - run: pwd
-      - unity/prepare-env:
-          unity-serial-var-name: UNITY_SERIAL
-          unity-username-var-name: UNITY_USERNAME
-          unity-password-var-name: UNITY_PASSWORD
-          no_output_timeout: "30m"
-      - unity/test:
-          step-name: "Check if the tests run and results are uploaded"
-          test-platform: "editmode"
-      - unity/build:
-          step-name: "Build StandaloneWindows64 il2cpp"
-          build-target: StandaloneWindows64
-          build-method: "XGolf.Build.XGolfBuild.BuildGame"
-          build-name: "XGolf"
-          store-artifacts: false
-          compress: true
-          persist-to-workspace: true
-          custom-parameters: "-VERSION=$VERSION -ENV=$ENV -API_URL=$API_URL -SIMULATOR_EMAIL=$SIMULATOR_EMAIL -SIMULATOR_PASSWORD=$SIMULATOR_PASSWORD -BUILD_NUMBER=$CIRCLE_BUILD_NUM -GA4_MEASUREMENT_ID=$GA4_MEASUREMENT_ID -GA4_STREAM_API_SECRET=$GA4_STREAM_API_SECRET"
-      - unity/return-license:
-          unity-username-var-name: UNITY_USERNAME
-          unity-password-var-name: UNITY_PASSWORD
+          path: artifacts.zip
+
 workflows:
   build-and-test:
     jobs:
-      - unity-build:
-          name: "build-stage"
-          context:
-            - unity
+      - create-file:
+          name: "create-file"
       - sign:
-          name: "sign-stage"
+          name: "sign"
           requires:
-            - build-stage
-          file-name: "StandaloneWindows64.tar.gz"
-      # - inno-setup:
-      #     name: "inno-setup-stage"
-      #     requires:
-      #       - build-stage
-      #     context:
-      #       - simulator-stage
-# workflows:
-#   build-and-test:
-#     jobs:
-#       - create-file:
-#           name: "create-file"
-#           file-name: "echo-output.ps1"
-#       - sign:
-#           name: "sign"
-#           requires:
-#             - create-file
-#           file-path: ""
-#           file-name: "echo-output.ps1"
+            - create-file
+          file-path: ""
+          file-name: "echo-output.ps1"
