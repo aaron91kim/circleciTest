@@ -1,232 +1,90 @@
-# # version: 2.1
-# # orbs:
-# #   win: circleci/windows@2.4.1
-
-# # executors:
-# #   my-executor:
-# #     docker:
-# #       - image: buildpack-deps:jessie
-# #     working_directory: /tmp1
-
-# # jobs:
-# #   flow:
-# #     executor: win/default
-# #     working_directory: /tmp
-# #     steps:
-# #       - run: mkdir -p workspace
-# #       - run: echo "Hello, world!" > workspace/echo-output.exe
-
-# #       # Persist the specified paths (workspace/echo-output.exe) into the workspace for use in downstream job.
-# #       - persist_to_workspace:
-# #           # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
-# #           # environment which is taken to be the root directory of the workspace.
-# #           root: workspace
-# #           # Must be relative path from root
-# #           paths:
-# #             - echo-output.exe
-
-# #   downstream:
-# #     executor: my-executor
-# #     steps:
-# #       - run: pwd
-# #       - attach_workspace:
-# #           # Must be absolute path or relative path from working_directory
-# #           at: /tmp/workspace
-# #       - run: pwd
-# #       - run: ls
-# #       - run: ls /
-# #       - run: ls /tmp
-# #       - run: ls /tmp/workspace
-# #       - run: cat /tmp/workspace/echo-output.exe
-
-# # workflows:
-# #   btd:
-# #     jobs:
-# #       - flow
-# #       - downstream:
-# #           requires:
-# #             - flow
 # version: 2.1
+# orbs:
+#   win: circleci/windows@2.4.1
+
 # executors:
 #   my-executor:
 #     docker:
-#       - image: cimg/openjdk:21.0.2
-# orbs:
-#   win: circleci/windows@2.4.1
+#       - image: buildpack-deps:jessie
+#     working_directory: /tmp1
+
 # jobs:
-#   create-file:
+#   flow:
 #     executor: win/default
-#     working_directory: /home/circleci/project
+#     working_directory: /tmp
 #     steps:
 #       - run: mkdir -p workspace
-#       - run: echo "Hello, world!" > workspace/echo-output.exe
+#       - run: echo "Hello, world!" > workspace/echo-output.ps1
 
-#       # Persist the specified paths (workspace/echo-output.exe) into the workspace for use in downstream job.
+#       # Persist the specified paths (workspace/echo-output.ps1) into the workspace for use in downstream job.
 #       - persist_to_workspace:
 #           # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
 #           # environment which is taken to be the root directory of the workspace.
 #           root: workspace
 #           # Must be relative path from root
 #           paths:
-#             - echo-output.exe
-#   sign:
-#     working_directory: /home/circleci/project
-#     # Create an environment variable
-#     environment:
-#       ENVIRONMENT_NAME: TEST #PROD
-#       COMMAND: sign
-#       WORKSPACE: /home/circleci/project
-#       FILE_PATH: << parameters.file-path >>
-#       FILE_NAME: << parameters.file-name >>
+#             - echo-output.ps1
 
-#     # Artifact name for signing
-#     parameters:
-#       file-path:
-#         type: string
-#         default: ""
-#       file-name:
-#         type: string
-#         default: ""
-
-#     # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
-#     # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-#     # Be sure to update the Docker image tag below to openjdk version of your application.
-#     # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
+#   downstream:
 #     executor: my-executor
-#     # Add steps to the job
-#     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
 #     steps:
-#       - checkout
-
-#       # 1) Create Artifact Directory to store signed and unsigned artifact files
-#       - run:
-#           name: Create Artifacts Directory
-#           command: |
-#             mkdir -p ${WORKSPACE}/artifacts
-#             mkdir -p ${WORKSPACE}/packages
-#       # 2) Attach to Workspace in order to access the artifact file
+#       - run: pwd
 #       - attach_workspace:
-#           at: /home/circleci/project/workspace
-#       - run: cat /home/circleci/project/workspace/echo-output.exe
-#       # 3) Enable Docker for CodeSigner on Circle-CI
-#       - setup_remote_docker:
-#           name: Setup Remote Docker
-#           version: 19.03.13
-#           docker_layer_caching: true
-
-#       # 4) Pull Codesigner Docker Image From Github Registry
-#       - run:
-#           name: Docker Pull Image
-#           command: |
-#             docker pull ghcr.io/sslcom/codesigner:latest
-#             docker pull alpine:3.4
-
-#       # 5) This is the step where the created DLL, JAR, EXE, MSI, PS1 (artifact) files will be signed with CodeSignTool.
-#       - run:
-#           name: Sign Artifact File
-#           command: |
-#             docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
-#             docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
-#             docker cp ${WORKSPACE}/workspace/echo-output.exe codesign-in:/codesign/packages
-#             docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD=${PASSWORD} -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/echo-output.exe -output_dir_path=/codesign/artifacts
-#             docker cp codesign-out:/codesign/artifacts/echo-output.exe ${WORKSPACE}/artifacts/echo-output.exe
-#       - store_artifacts:
-#           path: ${WORKSPACE}/artifacts/echo-output.exe
+#           # Must be absolute path or relative path from working_directory
+#           at: /tmp/workspace
+#       - run: pwd
+#       - run: ls
+#       - run: ls /
+#       - run: ls /tmp
+#       - run: ls /tmp/workspace
+#       - run: cat /tmp/workspace/echo-output.ps1
 
 # workflows:
-#   build-and-test:
+#   btd:
 #     jobs:
-#       - create-file:
-#           name: "create-file"
-#       - sign:
-#           name: "sign"
+#       - flow
+#       - downstream:
 #           requires:
-#             - create-file
-#           file-path: ""
-#           file-name: "echo-output.exe"
-
-# Set the CI version.
+#             - flow
 version: 2.1
-
-# Windows Orbs
-orbs:
-  win: circleci/windows@4.1.1
-
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
-# Workflows orchestrate a set of jobs to be run. The jobs for this pipeline are # configured below
-workflows:
-  # The name of the workflow.
-  dotnet:
-    # Inside the workflow, you define the jobs you want to run.
-    jobs:
-      - build
-      - sign:
-          requires:
-            - build
-
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
-jobs:
-  # Below is the definition of your job to build and sign dll artifact
-  build:
-    # Create an environment variable
-    environment:
-      PROJECT_NAME: HelloWorld
-      PROJECT_VERSION: 0.0.1
-      DOTNET_VERSION: 3.1
-      WORKSPACE: /home/circleci/project
-
-    # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
-    # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
+executors:
+  my-executor:
     docker:
-      - image: mcr.microsoft.com/dotnet/sdk:3.1-bullseye
-
-    # Working directory for the job on Circle-CI
+      - image: cimg/openjdk:21.0.2
+orbs:
+  win: circleci/windows@2.4.1
+jobs:
+  create-file:
+    executor: win/default
     working_directory: /home/circleci/project
-
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
-      # 1) Check out the source code so that the workflow can access it.
-      - checkout
+      - run: mkdir -p workspace
+      - run: echo "Hello, world!" > workspace/echo-output.ps1
 
-      # 2) Create Artifact Directory to store signed and unsigned artifact files
-      - run:
-          name: Create Artifacts Directory
-          command: |
-            mkdir -p ${WORKSPACE}/artifacts
-            mkdir -p ${WORKSPACE}/packages
-
-      # 3) Build a dotnet project or solution and all of its dependencies.
-      - run:
-          name: Compile Dotnet Library with Dotnet Core
-          command: |
-            dotnet build dotnet/${PROJECT_NAME}.csproj -c Release
-
-      # 4) Copy artifact to artifacts directory
-      - run:
-          name: Copy Artifact File
-          command: |
-            cp bin/Release/netcoreapp${DOTNET_VERSION}/${PROJECT_NAME}-${PROJECT_VERSION}.dll ${WORKSPACE}/packages/HelloWorld.dll
-
-      # 5) Persist the artifact to the artifacts directory for signing
+      # Persist the specified paths (workspace/echo-output.ps1) into the workspace for use in downstream job.
       - persist_to_workspace:
-          root: .
+          # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
+          # environment which is taken to be the root directory of the workspace.
+          root: workspace
+          # Must be relative path from root
           paths:
-            - packages/*
-
-  # Below is the definition of your job to sign artifacts
+            - echo-output.ps1
   sign:
+    working_directory: /home/circleci/project
     # Create an environment variable
     environment:
       ENVIRONMENT_NAME: TEST #PROD
       COMMAND: sign
       WORKSPACE: /home/circleci/project
+      FILE_PATH: << parameters.file-path >>
+      FILE_NAME: << parameters.file-name >>
 
     # Artifact name for signing
     parameters:
-      artifact-name:
+      file-path:
+        type: string
+        default: ""
+      file-name:
         type: string
         default: ""
 
@@ -234,30 +92,26 @@ jobs:
     # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # Be sure to update the Docker image tag below to openjdk version of your application.
     # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
-    docker:
-      - image: cimg/openjdk:17.0.3
-
-    # Working directory for the job on Circle-CI
-    working_directory: /home/circleci/project
-
+    executor: my-executor
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
+      - checkout
+
       # 1) Create Artifact Directory to store signed and unsigned artifact files
       - run:
           name: Create Artifacts Directory
           command: |
             mkdir -p ${WORKSPACE}/artifacts
             mkdir -p ${WORKSPACE}/packages
-
       # 2) Attach to Workspace in order to access the artifact file
       - attach_workspace:
-          at: /home/circleci/project
-
+          at: /home/circleci/project/workspace
+      - run: cat /home/circleci/project/workspace/echo-output.ps1
       # 3) Enable Docker for CodeSigner on Circle-CI
       - setup_remote_docker:
           name: Setup Remote Docker
-          version: 19.03.13
+          version: 20.10.18
           docker_layer_caching: true
 
       # 4) Pull Codesigner Docker Image From Github Registry
@@ -273,14 +127,20 @@ jobs:
           command: |
             docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
             docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
-            docker cp ${WORKSPACE}/packages/HelloWorld.dll codesign-in:/codesign/packages
-            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out 
-              -e USERNAME=${USERNAME} -e PASSWORD=${PASSWORD} -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} 
-              ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/HelloWorld.dll -output_dir_path=/codesign/artifacts
-            docker cp codesign-out:/codesign/artifacts/HelloWorld.dll ${WORKSPACE}/artifacts/HelloWorld.dll
-
-      # 6) This uploads artifacts from your workflow allowing you to share data between jobs and store data once a workflow is complete
+            docker cp ${WORKSPACE}/workspace/echo-output.ps1 codesign-in:/codesign/packages
+            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD=${PASSWORD} -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/echo-output.ps1 -output_dir_path=/codesign/artifacts
+            docker cp codesign-out:/codesign/artifacts/echo-output.ps1 ${WORKSPACE}/artifacts/echo-output.ps1
       - store_artifacts:
-          name: Upload Signed Files
-          path: /home/circleci/project/artifacts/HelloWorld.dll
-          destination: HelloWorld.dll
+          path: ${WORKSPACE}/artifacts/echo-output.ps1
+
+workflows:
+  build-and-test:
+    jobs:
+      - create-file:
+          name: "create-file"
+      - sign:
+          name: "sign"
+          requires:
+            - create-file
+          file-path: ""
+          file-name: "echo-output.ps1"
