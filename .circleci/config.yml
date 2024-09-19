@@ -73,7 +73,7 @@ jobs:
     working_directory: /home/circleci/project
     # Create an environment variable
     environment:
-      ENVIRONMENT_NAME: TEST #PROD
+      ENVIRONMENT_NAME: PROD #PROD
       COMMAND: sign
       WORKSPACE: /home/circleci/project
       FILE_PATH: << parameters.file-path >>
