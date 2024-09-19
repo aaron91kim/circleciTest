@@ -75,6 +75,7 @@ jobs:
       ENVIRONMENT_NAME: PROD #PROD
       COMMAND: sign
       WORKSPACE: /home/circleci/project
+      ATTACHED_WORKINGSPACE: << parameters.attached-workingspace >>
       FILE_PATH: << parameters.file-path >>
       FILE_NAME: << parameters.file-name >>
 
@@ -86,6 +87,9 @@ jobs:
       file-name:
         type: string
         default: ""
+      attached-workingspace:
+        type: string
+        default: "."
 
     # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
     # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
@@ -95,8 +99,8 @@ jobs:
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
-      - checkout
-
+      - run: sudo mkdir -p ${ATTACHED_WORKINGSPACE}
+      - run: sudo chmod 777 ${ATTACHED_WORKINGSPACE}
       # 1) Create Artifact Directory to store signed and unsigned artifact files
       - run:
           name: Create Artifacts Directory
@@ -106,7 +110,7 @@ jobs:
       # 2) Attach to Workspace in order to access the artifact file
       - attach_workspace:
           at: /circleci/project
-      - run: cat /circleci/project/echo-output.ps1
+      - run: cat ${ATTACHED_WORKINGSPACE}/${FILE_NAME}
       # 3) Enable Docker for CodeSigner on Circle-CI
       - setup_remote_docker:
           name: Setup Remote Docker
@@ -126,9 +130,9 @@ jobs:
           command: |
             docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
             docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
-            docker cp /circleci/project/echo-output.ps1 codesign-in:/codesign/packages
+            docker cp ${ATTACHED_WORKINGSPACE}/${FILE_NAME} codesign-in:/codesign/packages
             docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD="${PASSWORD}" -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/echo-output.ps1 -output_dir_path=/codesign/artifacts
-            docker cp codesign-out:/codesign/artifacts/echo-output.ps1 ${WORKSPACE}/artifacts/echo-output.ps1
+            docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKSPACE}/artifacts/${FILE_NAME}
       - run: zip -r ${WORKSPACE}/artifacts.zip ${WORKSPACE}/artifacts
       - store_artifacts:
           path: artifacts.zip
@@ -144,3 +148,4 @@ workflows:
             - create-file
           file-path: ""
           file-name: "echo-output.ps1"
+          attached-workingspace: "/circleci/project"
