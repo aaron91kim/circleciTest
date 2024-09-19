@@ -1,33 +1,91 @@
 version: 2.1
-executors:
-  my-executor:
-    docker:
-      - image: cimg/openjdk:17.0.3
 orbs:
   unity: game-ci/unity@1.7.0
   win: circleci/windows@2.4.1
 jobs:
+  sign:
+    working_directory: /circleci/project
+    # Create an environment variable
+    environment:
+      ENVIRONMENT_NAME: PROD #PROD
+      COMMAND: sign
+      WORKSPACE: /circleci/project
+      FILE_PATH: << parameters.file-path >>
+      FILE_NAME: << parameters.file-name >>
+
+    # Artifact name for signing
+    parameters:
+      file-path:
+        type: string
+        default: ""
+      file-name:
+        type: string
+        default: ""
+    # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
+    # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
+    # Be sure to update the Docker image tag below to openjdk version of your application.
+    # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
+    docker:
+      - image: cimg/openjdk:17.0.3
+    # Add steps to the job
+    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+    steps:
+      # 1) Create Artifact Directory to store signed and unsigned artifact files
+      - run:
+          name: Create Artifacts Directory
+          command: |
+            mkdir -p ${WORKSPACE}/artifacts
+            mkdir -p ${WORKSPACE}/packages
+      # 2) Attach to Workspace in order to access the artifact file
+      - attach_workspace:
+          at: "."
+      - run: cat /circleci/project/${FILE_NAME}
+      # 3) Enable Docker for CodeSigner on Circle-CI
+      - setup_remote_docker:
+          name: Setup Remote Docker
+          version: 20.10.24
+          docker_layer_caching: true
+
+      # 4) Pull Codesigner Docker Image From Github Registry
+      - run:
+          name: Docker Pull Image
+          command: |
+            docker pull ghcr.io/sslcom/codesigner:latest
+            docker pull alpine:3.4
+
+      # 5) This is the step where the created DLL, JAR, EXE, MSI, PS1 (artifact) files will be signed with CodeSignTool.
+      - run:
+          name: Sign Artifact File
+          command: |
+            docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
+            docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
+            docker cp ${WORKSPACE}/${FILE_NAME} codesign-in:/codesign/packages
+            docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD="${PASSWORD}" -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/${FILE_NAME} -output_dir_path=/codesign/artifacts
+            docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKSPACE}/artifacts/${FILE_NAME}
+      - store_artifacts:
+          path: artifacts/${FILE_NAME}
   inno-setup:
     executor:
       name: win/default
     steps:
       - attach_workspace:
-          at: "/home/circleci/project"
+          at: "."
       - run: choco install innosetup
-      - run: tar xf "./StandaloneWindows64.tar.gz"
-      - run: iscc "installer.iss"
+      - run: mkdir -p /unity_project/build/
+      - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
+      - run: iscc "c:\unity_project\build\installer.iss"
       - store_artifacts:
           path: xgolf_setup.exe
   unity-build:
-    working_directory: /home/circleci/project
     executor:
       name: "unity/windows-2019"
-      size: "medium"
+      size: "large"
       editor_version: "2019.4.35f1"
       target_platform: "windows-il2cpp"
     steps:
       - run: git config --system core.longpaths true
       - checkout
+      - run: pwd
       - unity/prepare-env:
           unity-serial-var-name: UNITY_SERIAL
           unity-username-var-name: UNITY_USERNAME
@@ -55,76 +113,17 @@ workflows:
           name: "build-stage"
           context:
             - unity
-      - inno-setup:
-          name: "inno-setup-stage"
+      - sign:
+          name: "sign-stage"
           requires:
             - build-stage
-          context:
-            - simulator-stage
-#   sign:
-#     working_directory: /unity_project/build
-#     # Create an environment variable
-#     environment:
-#       ENVIRONMENT_NAME: PROD #PROD
-#       COMMAND: sign
-#       WORKSPACE: /unity_project/build
-#       FILE_PATH: << parameters.file-path >>
-#       FILE_NAME: << parameters.file-name >>
-
-#     # Artifact name for signing
-#     parameters:
-#       file-path:
-#         type: string
-#         default: ""
-#       file-name:
-#         type: string
-#         default: ""
-
-#     # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
-#     # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-#     # Be sure to update the Docker image tag below to openjdk version of your application.
-#     # A list of available CircleCI Docker Convenience Images are available here: https://circleci.com/developer/images/image/cimg/openjdk
-#     executor: my-executor
-#     # Add steps to the job
-#     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
-#     steps:
-#       - checkout
-
-#       # 1) Create Artifact Directory to store signed and unsigned artifact files
-#       - run:
-#           name: Create Artifacts Directory
-#           command: |
-#             mkdir -p ${WORKSPACE}/artifacts
-#             mkdir -p ${WORKSPACE}/packages
-#       # 2) Attach to Workspace in order to access the artifact file
-#       - attach_workspace:
-#           at: "."
-#       - run: cat /unity_project/build/${FILE_NAME}
-#       # 3) Enable Docker for CodeSigner on Circle-CI
-#       - setup_remote_docker:
-#           name: Setup Remote Docker
-#           version: 20.10.24
-#           docker_layer_caching: true
-
-#       # 4) Pull Codesigner Docker Image From Github Registry
-#       - run:
-#           name: Docker Pull Image
-#           command: |
-#             docker pull ghcr.io/sslcom/codesigner:latest
-#             docker pull alpine:3.4
-
-#       # 5) This is the step where the created DLL, JAR, EXE, MSI, PS1 (artifact) files will be signed with CodeSignTool.
-#       - run:
-#           name: Sign Artifact File
-#           command: |
-#             docker create -v /codesign/packages  --name codesign-in  alpine:3.4 /bin/true
-#             docker create -v /codesign/artifacts --name codesign-out alpine:3.4 /bin/true
-#             docker cp ${WORKSPACE}/${FILE_NAME} codesign-in:/codesign/packages
-#             docker run -i --rm --dns 8.8.8.8 --network host --volumes-from codesign-in --volumes-from codesign-out -e USERNAME=${USERNAME} -e PASSWORD="${PASSWORD}" -e CREDENTIAL_ID=${CREDENTIAL_ID} -e TOTP_SECRET=${TOTP_SECRET} -e ENVIRONMENT_NAME=${ENVIRONMENT_NAME} ghcr.io/sslcom/codesigner:latest ${COMMAND} -input_file_path=/codesign/packages/${FILE_NAME} -output_dir_path=/codesign/artifacts
-#             docker cp codesign-out:/codesign/artifacts/${FILE_NAME} ${WORKSPACE}/artifacts/${FILE_NAME}
-#       - store_artifacts:
-#           path: artifacts/${FILE_NAME}
-
+          file-name: "StandaloneWindows64.tar.gz"
+      # - inno-setup:
+      #     name: "inno-setup-stage"
+      #     requires:
+      #       - build-stage
+      #     context:
+      #       - simulator-stage
 # workflows:
 #   build-and-test:
 #     jobs:
