@@ -50,7 +50,7 @@ version: 2.1
 executors:
   my-executor:
     docker:
-      - image: cimg/openjdk:21.0.2
+      - image: cimg/openjdk:17.0.3
 orbs:
   win: circleci/windows@2.4.1
 jobs:
@@ -111,7 +111,7 @@ jobs:
       # 3) Enable Docker for CodeSigner on Circle-CI
       - setup_remote_docker:
           name: Setup Remote Docker
-          version: 20.10.18
+          version: 20.10.23
           docker_layer_caching: true
 
       # 4) Pull Codesigner Docker Image From Github Registry
