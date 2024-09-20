@@ -64,12 +64,7 @@ jobs:
       - run: choco install innosetup
       - run: mkdir -p /unity_project/build/
       - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
-      - attach_workspace:
-          at: /home/circleci/project
-      - run: ls /
-      - run: ls /home/
-      - run: ls /home/circleci
-      - run: mv /home/circleci/project/artifacts/XGolf.exe /unity_project/build
+      - run: mv artifacts/XGolf.exe /unity_project/build
       - run: iscc "c:\unity_project\build\installer.iss"
       - persist_to_workspace:
           root: "."
@@ -179,48 +174,48 @@ jobs:
       - store_artifacts:
           path: artifacts
 
-# workflows:
-#   build-and-test:
-#     jobs:
-#       - unity-build:
-#           name: "build-stage"
-#           context:
-#             - unity
-#       - pre-inno-setup:
-#           name: "pre-inno-setup"
-#           requires:
-#             - build-stage
-#       - sign:
-#           name: "sign-executable"
-#           requires:
-#             - pre-inno-setup
-#           file-path: ""
-#           file-name: "XGolf.exe"
-#           attached-workingspace: "/circleci/project"
-#       - inno-setup-with-signing:
-#           name: "inno-setup"
-#           requires:
-#             - sign-executable
-#       - sign:
-#           name: "sign installer"
-#           requires:
-#             - inno-setup
-#           file-path: ""
-#           file-name: "xgolf_setup.exe"
-#           attached-workingspace: "/circleci/project"
 workflows:
   build-and-test:
     jobs:
-      - create-file:
-          name: "create-file"
+      - unity-build:
+          name: "build-stage"
+          context:
+            - unity
+      - pre-inno-setup:
+          name: "pre-inno-setup"
+          requires:
+            - build-stage
       - sign:
-          name: "sign"
+          name: "sign-executable"
           requires:
-            - create-file
+            - pre-inno-setup
           file-path: ""
-          file-name: "echo-output.ps1"
+          file-name: "XGolf.exe"
           attached-workingspace: "/circleci/project"
-      - check-file:
-          name: "check-file"
+      - inno-setup-with-signing:
+          name: "inno-setup"
           requires:
-            - sign
+            - sign-executable
+      - sign:
+          name: "sign installer"
+          requires:
+            - inno-setup
+          file-path: ""
+          file-name: "xgolf_setup.exe"
+          attached-workingspace: "/circleci/project"
+# workflows:
+#   build-and-test:
+#     jobs:
+#       - create-file:
+#           name: "create-file"
+#       - sign:
+#           name: "sign"
+#           requires:
+#             - create-file
+#           file-path: ""
+#           file-name: "echo-output.ps1"
+#           attached-workingspace: "/circleci/project"
+#       - check-file:
+#           name: "check-file"
+#           requires:
+#             - sign
