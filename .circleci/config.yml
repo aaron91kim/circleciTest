@@ -54,7 +54,7 @@ jobs:
       - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
       - run: iscc "c:\unity_project\build\installer.iss"
       - store_artifacts:
-          path: xgolf_setup.exe
+          path: /unity_project/build/xgolf_setup.exe
   inno-setup-with-signing:
     executor:
       name: win/default
@@ -64,8 +64,12 @@ jobs:
       - run: choco install innosetup
       - run: mkdir -p /unity_project/build/
       - run: tar xf "./StandaloneWindows64.tar.gz" -C /unity_project/build
-      - run: mv artifacts/XGolf.exe /unity_project/build
+      - run: mv artifacts/XGolf.exe /unity_project/build -Force
       - run: iscc "c:\unity_project\build\installer.iss"
+      - run: pwd
+      - run: mv /unity_project/build/xgolf_setup.exe ./
+      - run: ls
+      - run: ls /unity_project/build
       - persist_to_workspace:
           root: "."
           paths:
@@ -104,7 +108,7 @@ jobs:
     working_directory: /home/circleci/project
     # Create an environment variable
     environment:
-      ENVIRONMENT_NAME: PROD #PROD
+      ENVIRONMENT_NAME: TEST #PROD
       COMMAND: sign
       WORKSPACE: /home/circleci/project
       ATTACHED_WORKINGSPACE: << parameters.attached-workingspace >>
