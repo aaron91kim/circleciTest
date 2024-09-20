@@ -108,25 +108,23 @@ jobs:
     working_directory: /home/circleci/project
     # Create an environment variable
     environment:
-      ENVIRONMENT_NAME: TEST #PROD
+      ENVIRONMENT_NAME: << parameters.env-name >> #PROD
       COMMAND: sign
       WORKSPACE: /home/circleci/project
       ATTACHED_WORKINGSPACE: << parameters.attached-workingspace >>
-      FILE_PATH: << parameters.file-path >>
       FILE_NAME: << parameters.file-name >>
 
     # Artifact name for signing
     parameters:
-      file-path:
+      env-name:
         type: string
-        default: ""
+        default: "TEST"
       file-name:
         type: string
         default: ""
       attached-workingspace:
         type: string
         default: "."
-
     # These next lines define a Docker executor: https://circleci.com/docs/2.0/executor-types/
     # You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # Be sure to update the Docker image tag below to openjdk version of your application.
@@ -178,48 +176,50 @@ jobs:
       - store_artifacts:
           path: artifacts
 
-workflows:
-  build-and-test:
-    jobs:
-      - unity-build:
-          name: "build-stage"
-          context:
-            - unity
-      - pre-inno-setup:
-          name: "pre-inno-setup"
-          requires:
-            - build-stage
-      - sign:
-          name: "sign-executable"
-          requires:
-            - pre-inno-setup
-          file-path: ""
-          file-name: "XGolf.exe"
-          attached-workingspace: "/circleci/project"
-      - inno-setup-with-signing:
-          name: "inno-setup"
-          requires:
-            - sign-executable
-      - sign:
-          name: "sign installer"
-          requires:
-            - inno-setup
-          file-path: ""
-          file-name: "xgolf_setup.exe"
-          attached-workingspace: "/circleci/project"
 # workflows:
 #   build-and-test:
 #     jobs:
-#       - create-file:
-#           name: "create-file"
+#       - unity-build:
+#           name: "build-stage"
+#           context:
+#             - unity
+#       - pre-inno-setup:
+#           name: "pre-inno-setup"
+#           requires:
+#             - build-stage
 #       - sign:
-#           name: "sign"
+#           name: "sign-executable"
 #           requires:
-#             - create-file
+#             - pre-inno-setup
 #           file-path: ""
-#           file-name: "echo-output.ps1"
+#           file-name: "XGolf.exe"
 #           attached-workingspace: "/circleci/project"
-#       - check-file:
-#           name: "check-file"
+#       - inno-setup-with-signing:
+#           name: "inno-setup"
 #           requires:
-#             - sign
+#             - sign-executable
+#       - sign:
+#           name: "sign installer"
+#           requires:
+#             - inno-setup
+#           file-path: ""
+#           file-name: "xgolf_setup.exe"
+#           attached-workingspace: "/circleci/project"
+workflows:
+  build-and-test:
+    jobs:
+      - create-file:
+          name: "create-file"
+      - sign:
+          name: "sign"
+          context:
+            - code-sign
+          requires:
+            - create-file
+          file-name: "echo-output.ps1"
+          env-name: "TEST"
+          attached-workingspace: "/circleci/project"
+      - check-file:
+          name: "check-file"
+          requires:
+            - sign
