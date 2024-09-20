@@ -1,51 +1,3 @@
-# version: 2.1
-# orbs:
-#   win: circleci/windows@2.4.1
-
-# executors:
-#   my-executor:
-#     docker:
-#       - image: buildpack-deps:jessie
-#     working_directory: /tmp1
-
-# jobs:
-#   flow:
-#     executor: win/default
-#     working_directory: /tmp
-#     steps:
-#       - run: mkdir -p workspace
-#       - run: echo "Hello, world!" > workspace/echo-output.ps1
-
-#       # Persist the specified paths (workspace/echo-output.ps1) into the workspace for use in downstream job.
-#       - persist_to_workspace:
-#           # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
-#           # environment which is taken to be the root directory of the workspace.
-#           root: workspace
-#           # Must be relative path from root
-#           paths:
-#             - echo-output.ps1
-
-#   downstream:
-#     executor: my-executor
-#     steps:
-#       - run: pwd
-#       - attach_workspace:
-#           # Must be absolute path or relative path from working_directory
-#           at: /tmp/workspace
-#       - run: pwd
-#       - run: ls
-#       - run: ls /
-#       - run: ls /tmp
-#       - run: ls /tmp/workspace
-#       - run: cat /tmp/workspace/echo-output.ps1
-
-# workflows:
-#   btd:
-#     jobs:
-#       - flow
-#       - downstream:
-#           requires:
-#             - flow
 version: 2.1
 executors:
   my-executor:
@@ -55,20 +7,30 @@ orbs:
   win: circleci/windows@2.4.1
   unity: game-ci/unity@1.7.0
 jobs:
-  # create-file:
-  #   executor: win/default
-  #   working_directory: /circleci/project
-  #   steps:
-  #     - run: echo "Hello, world!" > echo-output.ps1
+  create-file:
+    executor: win/default
+    working_directory: /circleci/project
+    steps:
+      - run: echo "Hello, world!" > echo-output.ps1
 
-  #     # Persist the specified paths (workspace/echo-output.ps1) into the workspace for use in downstream job.
-  #     - persist_to_workspace:
-  #         # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
-  #         # environment which is taken to be the root directory of the workspace.
-  #         root: "."
-  #         # Must be relative path from root
-  #         paths:
-  #           - echo-output.ps1
+      # Persist the specified paths (workspace/echo-output.ps1) into the workspace for use in downstream job.
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory in the execution
+          # environment which is taken to be the root directory of the workspace.
+          root: "."
+          # Must be relative path from root
+          paths:
+            - echo-output.ps1
+  check-file:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: "."
+      - run: ls
+      - run: ls /
+      - run: ls /home/
+      - run: ls /home/circleci
+      - run: ls /home/circleci/project
   pre-inno-setup:
     executor:
       name: win/default
@@ -213,36 +175,52 @@ jobs:
       - persist_to_workspace:
           root: "."
           paths:
-            - artifacts
+            - artifacts/*
       - store_artifacts:
           path: artifacts
 
+# workflows:
+#   build-and-test:
+#     jobs:
+#       - unity-build:
+#           name: "build-stage"
+#           context:
+#             - unity
+#       - pre-inno-setup:
+#           name: "pre-inno-setup"
+#           requires:
+#             - build-stage
+#       - sign:
+#           name: "sign-executable"
+#           requires:
+#             - pre-inno-setup
+#           file-path: ""
+#           file-name: "XGolf.exe"
+#           attached-workingspace: "/circleci/project"
+#       - inno-setup-with-signing:
+#           name: "inno-setup"
+#           requires:
+#             - sign-executable
+#       - sign:
+#           name: "sign installer"
+#           requires:
+#             - inno-setup
+#           file-path: ""
+#           file-name: "xgolf_setup.exe"
+#           attached-workingspace: "/circleci/project"
 workflows:
   build-and-test:
     jobs:
-      - unity-build:
-          name: "build-stage"
-          context:
-            - unity
-      - pre-inno-setup:
-          name: "pre-inno-setup"
-          requires:
-            - build-stage
+      - create-file:
+          name: "create-file"
       - sign:
-          name: "sign-executable"
+          name: "sign"
           requires:
-            - pre-inno-setup
+            - create-file
           file-path: ""
-          file-name: "XGolf.exe"
+          file-name: "echo-output.ps1"
           attached-workingspace: "/circleci/project"
-      - inno-setup-with-signing:
-          name: "inno-setup"
+      - check-file:
+          name: "check-file"
           requires:
-            - sign-executable
-      - sign:
-          name: "sign installer"
-          requires:
-            - inno-setup
-          file-path: ""
-          file-name: "xgolf_setup.exe"
-          attached-workingspace: "/circleci/project"
+            - sign
